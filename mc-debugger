@@ -83,8 +83,8 @@ def printrpc(agent, action, result)
     puts
     puts MCollective::RPC::Helpers.text_for_result("local_invocation", result[:statuscode], result[:statusmsg], result[:data], ddl)
     puts
-rescue
-    # nothing
+rescue Exception => e
+    MCollective::Log.warn "Loading the DDL failed: #{e.class}: #{e}"
 end
 
 def call(agent, action, request={})
