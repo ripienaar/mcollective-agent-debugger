@@ -11,7 +11,7 @@ How?
 type "help" for help using this debugger
 >> r = call("filemgr", "status", :file => "/tmp")
 debug 2011/03/08 17:03:58: pluginmanager.rb:83:in `loadclass' Loading MCollective::Agent::Filemgr from mcollective/agent/filemgr.rb
-debug 2011/03/08 17:03:58: pluginmanager.rb:36:in `<<' Registering plugin filemgr_agent with class MCollective::Agent::Filemgr
+debug 2011/03/08 17:03:58: pluginmanager.rb:36:in `&lt;&lt;' Registering plugin filemgr_agent with class MCollective::Agent::Filemgr
 debug 2011/03/08 17:03:58: ddl.rb:56:in `findddlfile' Found filemgr ddl at /usr/libexec/mcollective/mcollective/agent/filemgr.ddl
 debug 2011/03/08 17:03:58: pluginmanager.rb:73:in `[]' Returning plugin filemgr_agent with class MCollective::Agent::Filemgr
 debug 2011/03/08 17:03:58: pluginmanager.rb:73:in `[]' Returning plugin connector_plugin with class NoopConnector
