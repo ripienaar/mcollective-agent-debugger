@@ -1,0 +1,112 @@
+#!/usr/bin/ruby
+
+require 'rubygems'
+require 'irb'
+require 'mcollective'
+require 'tempfile'
+require 'pp'
+
+
+# Stub connector that just logs
+class NoopConnector
+    def method_missing(*args)
+        MCollective::Logger.debug("connector: #{args.pretty_inspect}")
+        true
+    end
+end
+
+def consolize &block
+    yield
+
+    IRB.setup(nil)
+    irb = IRB::Irb.new
+    IRB.conf[:MAIN_CONTEXT] = irb.context
+    irb.context.evaluate("require 'irb/completion'", 0)
+
+    install_alias_method :help, :debugger_help, IRB::ExtendCommandBundle::OVERRIDE_ALL
+
+    trap("SIGINT") do
+        irb.signal_handle
+    end
+    catch(:IRB_EXIT) do
+        irb.eval_input
+    end
+end
+
+def debugger_help
+    puts <<EOF
+    Available Commands:
+
+        call(agent, action, args)  - Calls an action
+        ddl(agent)                 - Shows the ddl help for an agent
+        actions(agent)             - Shows the available actions for an agent
+
+    Calling Actions:
+
+      To call the status action on the filemgr agent:
+
+         call "filemgr", "status", :file => "/tmp"
+
+    The ddl and actions commands require you to have a DDL for your agent
+EOF
+end
+
+def load_agent(agent)
+    classname = "MCollective::Agent::#{agent.capitalize}"
+
+    MCollective::PluginManager.delete("#{agent}_agent")
+
+    MCollective::PluginManager.loadclass(classname)
+    MCollective::PluginManager << {:type => "#{agent}_agent", :class => classname}
+end
+
+def setup(configfile="server.cfg")
+    # stub the connector with a noop one
+    MCollective::PluginManager << {:type => "connector_plugin", :class => "NoopConnector"}
+
+    logger = MCollective::Logger::Console_logger.new
+    MCollective::Log.configure(logger)
+    logger.set_level(:fatal)
+
+    config = MCollective::Config.instance
+    config.loadconfig(configfile) unless config.configured
+
+    logger.set_level(:debug)
+end
+
+def call(agent, action, request)
+    req = {:action => action,
+           :agent  => agent}
+
+    req[:data] = request
+
+    load_agent(agent)
+
+    MCollective::PluginManager["#{agent}_agent"].handlemsg({:body => req}, MCollective::PluginManager["connector_plugin"])
+end
+
+def actions(agent)
+    ddl = MCollective::RPC::DDL.new(agent)
+    ddl.actions.sort
+end
+
+def ddl(agent)
+    ddl = MCollective::RPC::DDL.new(agent)
+
+    Tempfile.open("ddhelp") do |f|
+        f.puts ddl.help(MCollective::Config.instance.rpchelptemplate)
+        f.flush
+        system("less #{f.path}")
+    end
+rescue Exception => e
+    STDERR.puts "Could not load ddl: #{e.class}: #{e}"
+end
+
+consolize do
+    configfile = MCollective::Util.config_file_for_user
+    configfile = ARGV[0] if ARGV.size == 1
+
+    setup(configfile)
+
+    puts 'type "help" for help using this debugger'
+end
