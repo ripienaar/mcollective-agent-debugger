@@ -41,6 +41,7 @@ def debugger_help
         printrpc(agent, action, result) - Displays DDL assisted results
         ddl(agent)                      - Shows the ddl help for an agent
         actions(agent)                  - Shows the available actions for an agent
+        debugger                        - Start ruby-debugger #{@has_debugger ? '' : '(disabled, install ruby-debugger gem)'}
 
     Calling Actions:
 
@@ -125,6 +126,14 @@ end
 consolize do
     configfile = MCollective::Util.config_file_for_user
     configfile = ARGV[0] if ARGV.size == 1
+
+    @has_debugger = false
+
+    begin
+        require 'rubygems'
+        require 'ruby-debug'
+        @has_debugger = true
+    end
 
     setup(configfile)
 

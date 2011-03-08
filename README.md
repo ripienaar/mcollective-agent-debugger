@@ -69,6 +69,50 @@ The return will be the full SimpleRPC style result and logging will always be in
 
 It will use your normal mcollective config file to find the libdir, you can specify an alternative config file as the first argument on the command line
 
+Debugging?
+==========
+
+If you install the ruby-debug gem you can use this in irb session, type 'help' to see if its enabled
+
+We'll debug a simple echo agent, it has a random check to similate failure.
+
+We set a breakpoint after the random logic, inspect the variable and tweak it to avoid the fail!
+
+<pre>
+>> debugger
+/usr/lib/ruby/1.8/irb/context.rb:163
+@last_value = value
+(rdb:1) b /usr/libexec/mcollective/mcollective/agent/echo.rb:16
+Breakpoint 1 file /usr/libexec/mcollective/mcollective/agent/echo.rb, line 16
+(rdb:1) c
+=> 1
+>> call :echo, :echo, :msg => "foo"
+(rdb:1) l=
+[11, 20] in /usr/libexec/mcollective/mcollective/agent/echo.rb
+   11
+   12              action "echo" do
+   13                  validate :msg, String
+   14
+   15                  r = rand(10) % 2
+=> 16                  reply.fail! "Boom!" if r == 0
+   17
+   18                  reply[:msg] = request[:msg]
+   19                  reply[:time] = Time.now.to_s
+   20              end
+(rdb:1) display r
+0
+(rdb:1) eval r=1
+1
+(rdb:1) continue
+debug 2011/03/08 21:08:58: ddl.rb:56:in `findddlfile' Found echo ddl at /usr/libexec/mcollective/mcollective/agent/echo.ddl
+
+local_invocation
+   Message: foo
+      Time: Tue Mar 08 21:08:58 +0000 2011
+
+=> {:statusmsg=>"OK", :data=>{:msg=>"foo", :time=>"Tue Mar 08 21:08:58 +0000 2011"}, :statuscode=>0}
+</pre>
+
 Contact?
 ========
 
