@@ -79,6 +79,8 @@ We'll debug a simple echo agent, it has a random check to similate failure.
 We set a breakpoint after the random logic, inspect the variable and tweak it to avoid the fail!
 
 <pre>
+% mc-debugger
+type "help" for help using this debugger
 >> debugger
 /usr/lib/ruby/1.8/irb/context.rb:163
 @last_value = value
@@ -86,6 +88,11 @@ We set a breakpoint after the random logic, inspect the variable and tweak it to
 Breakpoint 1 file /usr/libexec/mcollective/mcollective/agent/echo.rb, line 16
 (rdb:1) c
 => 1
+</pre>
+
+The breakpoint is set for the line in the agent we want to stop at:
+
+<pre>
 >> call :echo, :echo, :msg => "foo"
 (rdb:1) l=
 [11, 20] in /usr/libexec/mcollective/mcollective/agent/echo.rb
@@ -101,6 +108,11 @@ Breakpoint 1 file /usr/libexec/mcollective/mcollective/agent/echo.rb, line 16
    20              end
 (rdb:1) display r
 0
+</pre>
+
+We did the call to the agent and once at the breakpoint we can look at the code and see where we're stopped.  We inspect the value of the _r_ variable and see that with the value 0 the fail! will be called.
+
+<pre>
 (rdb:1) eval r=1
 1
 (rdb:1) continue
@@ -112,6 +124,8 @@ local_invocation
 
 => {:statusmsg=>"OK", :data=>{:msg=>"foo", :time=>"Tue Mar 08 21:08:58 +0000 2011"}, :statuscode=>0}
 </pre>
+
+Finally we tweaked the value of the _r_ variable and the fail do not get triggered.
 
 Contact?
 ========
