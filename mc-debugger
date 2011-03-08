@@ -40,8 +40,9 @@ def debugger_help
         call(agent, action, args)       - Calls an action
         printrpc(agent, action, result) - Displays DDL assisted results
         ddl(agent)                      - Shows the ddl help for an agent
-        actions(agent)                  - Shows the available actions for an agent
-        debugger                        - Start ruby-debugger #{@has_debugger ? '' : '(disabled, install ruby-debugger gem)'}
+        actions(agent)                  - Shows the available actions for
+                                          an agent
+        debugger                        - Start ruby-debugger if available
 
     Calling Actions:
 
@@ -123,19 +124,26 @@ rescue Exception => e
     STDERR.puts "Could not load ddl: #{e.class}: #{e}"
 end
 
+def load_feature(lib, feature)
+    require lib
+    @features[feature] = true
+rescue
+end
+
 consolize do
     configfile = MCollective::Util.config_file_for_user
     configfile = ARGV[0] if ARGV.size == 1
 
-    @has_debugger = false
+    @features = {}
 
-    begin
-        require 'rubygems'
-        require 'ruby-debug'
-        @has_debugger = true
-    end
+    load_feature "rubygems", :rubygems
+    load_feature "ruby-debug", :debugger
 
     setup(configfile)
 
+    puts "The Marionette Collective Agent Debugger"
+    puts
+    puts 'available features: %s' % [ @features.keys.join(", ") ]
+    puts
     puts 'type "help" for help using this debugger'
 end
