@@ -43,6 +43,7 @@ def debugger_help
         actions(agent)                  - Shows the available actions for
                                           an agent
         debugger                        - Start ruby-debugger if available
+        trace                           - Toggle tracing of method calls
 
     Calling Actions:
 
@@ -100,7 +101,9 @@ def call(agent, action, request={})
 
     load_agent(agent)
 
+    enable_trace if @features[:trace]
     result = MCollective::PluginManager["#{agent}_agent"].handlemsg({:body => req}, MCollective::PluginManager["connector_plugin"])
+    disable_trace if @features[:trace]
 
     printrpc(agent, action, result)
 
@@ -130,11 +133,25 @@ def load_feature(lib, feature)
 rescue
 end
 
+def enable_trace
+    set_trace_func Proc.new {|event, file, line, id, binding, classname|
+        printf "[%8s] %30s %30s (%s:%-2d)\n", event, id, classname, file, line if event =~ /^(call|return)/ and classname.to_s !~ /IRB|Wirble|RubyLex|RubyToken/
+    }
+end
+
+def disable_trace
+    set_trace_func nil
+end
+
+def trace
+    @features[:trace] = !@features[:trace]
+end
+
 consolize do
     configfile = MCollective::Util.config_file_for_user
     configfile = ARGV[0] if ARGV.size == 1
 
-    @features = {}
+    @features = {:trace => false}
 
     load_feature "rubygems", :rubygems
     load_feature "ruby-debug", :debugger
