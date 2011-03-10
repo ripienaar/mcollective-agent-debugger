@@ -127,6 +127,11 @@ local_invocation
 
 Finally we tweaked the value of the _r_ variable and the fail do not get triggered.
 
+Changes?
+========
+
+2011/02/10 - Improve compatability with 1.0.x series
+
 Contact?
 ========
 

@@ -133,9 +133,28 @@ def load_feature(lib, feature)
 rescue
 end
 
+def colorize(color, msg)
+    MCollective::RPC::Helpers.colorize(color, msg)
+end
+
 def enable_trace
+    filematch   = ["mcollective/agent/", "mcollective/util/", "mcollective/rpc/reply.rb", "mcollective/rpc/agent.rb"]
+    idfilter    = [:method_added]
+    eventfilter = ["line"]
+
     set_trace_func Proc.new {|event, file, line, id, binding, classname|
-        printf "[%8s] %30s %30s (%s:%-2d)\n", event, id, classname, file, line if event =~ /^(call|return)/ and classname.to_s !~ /IRB|Wirble|RubyLex|RubyToken/
+        next if idfilter.include?(id)
+        next if eventfilter.include?(event)
+        next unless file =~ /#{filematch.join('|')}/
+
+        msg = "[%8s] %30s %30s (%s:%-2d)" % [event, id, classname, file, line]
+        if file =~ /mcollective\/(agent|util)/ or classname.to_s =~ /^MCollective::Agent::/
+            puts colorize(:green, msg)
+        elsif id == "fail" or id == "fail!"
+            puts colorize(:red, msg)
+        else
+            puts msg
+        end
     }
 end
 
@@ -148,7 +167,12 @@ def trace
 end
 
 consolize do
-    configfile = MCollective::Util.config_file_for_user
+    if MCollective::Util.respond_to? :config_file_for_user
+        configfile = MCollective::Util.config_file_for_user
+    else
+        configfile = "/etc/mcollective/client.cfg"
+    end
+
     configfile = ARGV[0] if ARGV.size == 1
 
     @features = {:trace => false}
