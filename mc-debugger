@@ -9,8 +9,13 @@ require 'pp'
 
 # Stub connector that just logs
 class NoopConnector
+    def send(*args)
+        MCollective::Log.debug("connector: #{args.pretty_inspect}")
+        true
+    end
+
     def method_missing(*args)
-        MCollective::Logger.debug("connector: #{args.pretty_inspect}")
+        MCollective::Log.debug("connector: #{args.pretty_inspect}")
         true
     end
 end
@@ -65,15 +70,17 @@ def load_agent(agent)
 end
 
 def setup(configfile="server.cfg")
-    # stub the connector with a noop one
-    MCollective::PluginManager << {:type => "connector_plugin", :class => "NoopConnector"}
-
     logger = MCollective::Logger::Console_logger.new
     MCollective::Log.configure(logger)
     logger.set_level(:fatal)
 
     config = MCollective::Config.instance
     config.loadconfig(configfile) unless config.configured
+
+    MCollective::PluginManager.delete("connector_plugin")
+
+    # stub the connector with a noop one
+    MCollective::PluginManager << {:type => "connector_plugin", :class => "NoopConnector"}
 
     logger.set_level(:debug)
 end
@@ -130,7 +137,7 @@ end
 def load_feature(lib, feature)
     require lib
     @features[feature] = true
-rescue
+rescue Exception
 end
 
 def colorize(color, msg)
