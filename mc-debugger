@@ -3,6 +3,7 @@
 require 'rubygems'
 require 'irb'
 require 'mcollective'
+require 'mcollective/logger/console_logger'
 require 'tempfile'
 require 'pp'
 
