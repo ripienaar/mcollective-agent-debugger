@@ -78,6 +78,8 @@ def setup(configfile="server.cfg")
   config = MCollective::Config.instance
   config.loadconfig(configfile) unless config.configured
 
+  config.instance_variable_get("@libdir").insert(0, ".")
+
   MCollective::PluginManager.delete("connector_plugin")
 
   # stub the connector with a noop one
@@ -143,6 +145,8 @@ end
 
 def colorize(color, msg)
   MCollective::RPC::Helpers.colorize(color, msg)
+rescue
+  MCollective::Util.colorize(color, msg)
 end
 
 def enable_trace
