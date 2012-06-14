@@ -10,189 +10,189 @@ require 'pp'
 
 # Stub connector that just logs
 class NoopConnector
-    def send(*args)
-        MCollective::Log.debug("connector: #{args.pretty_inspect}")
-        true
-    end
+  def send(*args)
+    MCollective::Log.debug("connector: #{args.pretty_inspect}")
+    true
+  end
 
-    def method_missing(*args)
-        MCollective::Log.debug("connector: #{args.pretty_inspect}")
-        true
-    end
+  def method_missing(*args)
+    MCollective::Log.debug("connector: #{args.pretty_inspect}")
+    true
+  end
 end
 
 def consolize &block
-    yield
+  yield
 
-    IRB.setup(nil)
-    irb = IRB::Irb.new
-    IRB.conf[:MAIN_CONTEXT] = irb.context
-    irb.context.evaluate("require 'irb/completion'", 0)
+  IRB.setup(nil)
+  irb = IRB::Irb.new
+  IRB.conf[:MAIN_CONTEXT] = irb.context
+  irb.context.evaluate("require 'irb/completion'", 0)
 
-    install_alias_method :help, :debugger_help, IRB::ExtendCommandBundle::OVERRIDE_ALL
+  install_alias_method :help, :debugger_help, IRB::ExtendCommandBundle::OVERRIDE_ALL
 
-    trap("SIGINT") do
-        irb.signal_handle
-    end
-    catch(:IRB_EXIT) do
-        irb.eval_input
-    end
+  trap("SIGINT") do
+    irb.signal_handle
+  end
+  catch(:IRB_EXIT) do
+    irb.eval_input
+  end
 end
 
 def debugger_help
-    puts <<EOF
-    Available Commands:
+  puts <<EOF
+  Available Commands:
 
-        call(agent, action, args)       - Calls an action
-        printrpc(agent, action, result) - Displays DDL assisted results
-        ddl(agent)                      - Shows the ddl help for an agent
-        actions(agent)                  - Shows the available actions for
-                                          an agent
-        debugger                        - Start ruby-debugger if available
-        trace                           - Toggle tracing of method calls
+      call(agent, action, args)       - Calls an action
+      printrpc(agent, action, result) - Displays DDL assisted results
+      ddl(agent)                      - Shows the ddl help for an agent
+      actions(agent)                  - Shows the available actions for
+                                        an agent
+      debugger                        - Start ruby-debugger if available
+      trace                           - Toggle tracing of method calls
 
-    Calling Actions:
+  Calling Actions:
 
-      To call the status action on the filemgr agent:
+    To call the status action on the filemgr agent:
 
-         call "filemgr", "status", :file => "/tmp"
+       call "filemgr", "status", :file => "/tmp"
 
-    The ddl and actions commands require you to have a DDL for your agent
+  The ddl and actions commands require you to have a DDL for your agent
 EOF
 end
 
 def load_agent(agent)
-    classname = "MCollective::Agent::#{agent.capitalize}"
+  classname = "MCollective::Agent::#{agent.capitalize}"
 
-    MCollective::PluginManager.delete("#{agent}_agent")
+  MCollective::PluginManager.delete("#{agent}_agent")
 
-    MCollective::PluginManager.loadclass(classname)
-    MCollective::PluginManager << {:type => "#{agent}_agent", :class => classname}
+  MCollective::PluginManager.loadclass(classname)
+  MCollective::PluginManager << {:type => "#{agent}_agent", :class => classname}
 end
 
 def setup(configfile="server.cfg")
-    logger = MCollective::Logger::Console_logger.new
-    MCollective::Log.configure(logger)
-    logger.set_level(:fatal)
+  logger = MCollective::Logger::Console_logger.new
+  MCollective::Log.configure(logger)
+  logger.set_level(:fatal)
 
-    config = MCollective::Config.instance
-    config.loadconfig(configfile) unless config.configured
+  config = MCollective::Config.instance
+  config.loadconfig(configfile) unless config.configured
 
-    MCollective::PluginManager.delete("connector_plugin")
+  MCollective::PluginManager.delete("connector_plugin")
 
-    # stub the connector with a noop one
-    MCollective::PluginManager << {:type => "connector_plugin", :class => "NoopConnector"}
+  # stub the connector with a noop one
+  MCollective::PluginManager << {:type => "connector_plugin", :class => "NoopConnector"}
 
-    logger.set_level(:debug)
+  logger.set_level(:debug)
 end
 
 def printrpc(agent, action, result)
-    ddl ||= MCollective::RPC::DDL.new(agent).action_interface(action.to_s)
+  ddl ||= MCollective::RPC::DDL.new(agent).action_interface(action.to_s)
 
-    ddl[:display] = :always
+  ddl[:display] = :always
 
-    puts
-    puts MCollective::RPC::Helpers.text_for_result("local_invocation", result[:statuscode], result[:statusmsg], result[:data], ddl)
-    puts
+  puts
+  puts MCollective::RPC::Helpers.text_for_result("local_invocation", result[:statuscode], result[:statusmsg], result[:data], ddl)
+  puts
 rescue Exception => e
-    MCollective::Log.warn "Loading the DDL failed: #{e.class}: #{e}"
+  MCollective::Log.warn "Loading the DDL failed: #{e.class}: #{e}"
 end
 
 def call(agent, action, request={})
-    agent = agent.to_s
-    action = action.to_s
+  agent = agent.to_s
+  action = action.to_s
 
-    req = {:action => action,
-           :agent  => agent}
+  req = {:action => action,
+    :agent  => agent}
 
-    req[:data] = request
+  req[:data] = request
 
-    load_agent(agent)
+  load_agent(agent)
 
-    enable_trace if @features[:trace]
-    result = MCollective::PluginManager["#{agent}_agent"].handlemsg({:body => req}, MCollective::PluginManager["connector_plugin"])
-    disable_trace if @features[:trace]
+  enable_trace if @features[:trace]
+  result = MCollective::PluginManager["#{agent}_agent"].handlemsg({:body => req}, MCollective::PluginManager["connector_plugin"])
+  disable_trace if @features[:trace]
 
-    printrpc(agent, action, result)
+  printrpc(agent, action, result)
 
-    result
+  result
 end
 
 def actions(agent)
-    ddl = MCollective::RPC::DDL.new(agent)
-    ddl.actions.sort
+  ddl = MCollective::RPC::DDL.new(agent)
+  ddl.actions.sort
 end
 
 def ddl(agent)
-    ddl = MCollective::RPC::DDL.new(agent)
+  ddl = MCollective::RPC::DDL.new(agent)
 
-    Tempfile.open("ddhelp") do |f|
-        f.puts ddl.help(MCollective::Config.instance.rpchelptemplate)
-        f.flush
-        system("less #{f.path}")
-    end
+  Tempfile.open("ddhelp") do |f|
+    f.puts ddl.help(MCollective::Config.instance.rpchelptemplate)
+    f.flush
+    system("less #{f.path}")
+  end
 rescue Exception => e
-    STDERR.puts "Could not load ddl: #{e.class}: #{e}"
+  STDERR.puts "Could not load ddl: #{e.class}: #{e}"
 end
 
 def load_feature(lib, feature)
-    require lib
-    @features[feature] = true
+  require lib
+  @features[feature] = true
 rescue Exception
 end
 
 def colorize(color, msg)
-    MCollective::RPC::Helpers.colorize(color, msg)
+  MCollective::RPC::Helpers.colorize(color, msg)
 end
 
 def enable_trace
-    filematch   = ["mcollective/agent/", "mcollective/util/", "mcollective/rpc/reply.rb", "mcollective/rpc/agent.rb"]
-    idfilter    = [:method_added]
-    eventfilter = ["line"]
+  filematch   = ["mcollective/agent/", "mcollective/util/", "mcollective/rpc/reply.rb", "mcollective/rpc/agent.rb"]
+  idfilter    = [:method_added]
+  eventfilter = ["line"]
 
-    set_trace_func Proc.new {|event, file, line, id, binding, classname|
-        next if idfilter.include?(id)
-        next if eventfilter.include?(event)
-        next unless file =~ /#{filematch.join('|')}/
+  set_trace_func Proc.new {|event, file, line, id, binding, classname|
+    next if idfilter.include?(id)
+    next if eventfilter.include?(event)
+    next unless file =~ /#{filematch.join('|')}/
 
-        msg = "[%8s] %30s %30s (%s:%-2d)" % [event, id, classname, file, line]
-        if file =~ /mcollective\/(agent|util)/ or classname.to_s =~ /^MCollective::Agent::/
-            puts colorize(:green, msg)
-        elsif id == "fail" or id == "fail!"
-            puts colorize(:red, msg)
-        else
-            puts msg
-        end
-    }
+      msg = "[%8s] %30s %30s (%s:%-2d)" % [event, id, classname, file, line]
+    if file =~ /mcollective\/(agent|util)/ or classname.to_s =~ /^MCollective::Agent::/
+      puts colorize(:green, msg)
+    elsif id == "fail" or id == "fail!"
+      puts colorize(:red, msg)
+    else
+      puts msg
+    end
+  }
 end
 
 def disable_trace
-    set_trace_func nil
+  set_trace_func nil
 end
 
 def trace
-    @features[:trace] = !@features[:trace]
+  @features[:trace] = !@features[:trace]
 end
 
 consolize do
-    if MCollective::Util.respond_to? :config_file_for_user
-        configfile = MCollective::Util.config_file_for_user
-    else
-        configfile = "/etc/mcollective/client.cfg"
-    end
+  if MCollective::Util.respond_to? :config_file_for_user
+    configfile = MCollective::Util.config_file_for_user
+  else
+    configfile = "/etc/mcollective/client.cfg"
+  end
 
-    configfile = ARGV[0] if ARGV.size == 1
+  configfile = ARGV[0] if ARGV.size == 1
 
-    @features = {:trace => false}
+  @features = {:trace => false}
 
-    load_feature "rubygems", :rubygems
-    load_feature "ruby-debug", :debugger
+  load_feature "rubygems", :rubygems
+  load_feature "ruby-debug", :debugger
 
-    setup(configfile)
+  setup(configfile)
 
-    puts "The Marionette Collective Agent Debugger"
-    puts
-    puts 'available features: %s' % [ @features.keys.join(", ") ]
-    puts
-    puts 'type "help" for help using this debugger'
+  puts "The Marionette Collective Agent Debugger"
+  puts
+  puts 'available features: %s' % [ @features.keys.join(", ") ]
+  puts
+  puts 'type "help" for help using this debugger'
 end
